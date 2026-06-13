@@ -78,7 +78,7 @@ This project is developed for academic and learning purposes.
 
 ### ThingSpeak Dashboard
 
-![ThingSpeak Dashboard](ThingSpeak dashboard screenshot.jpeg)
+![ThingSpeak Dashboard](Thingspeak dashboard screenshot.jpeg)
 
 ### Demonstration Video
 The project demonstration video can be viewed from the file:
