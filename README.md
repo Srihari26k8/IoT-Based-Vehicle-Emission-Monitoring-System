@@ -73,3 +73,12 @@ Team Members
 License
 
 This project is developed for academic and learning purposes.
+
+## Project Output
+
+### ThingSpeak Dashboard
+![ThingSpeak Dashboard](Thingspeak%20dashboard%20screenshot.jpeg)
+
+### Demonstration Video
+The project demonstration video can be viewed from the file:
+- output video.mp4
