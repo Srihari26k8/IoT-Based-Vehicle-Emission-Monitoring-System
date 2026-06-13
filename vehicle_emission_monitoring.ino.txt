@@ -1,0 +1,312 @@
+#include <Wire.h>
+#include <Adafruit_ADS1X15.h>
+#include <TinyGPS++.h>
+#include <SoftwareSerial.h>
+
+Adafruit_ADS1115 ads;
+TinyGPSPlus gps;
+
+const uint8_t ADS_SDA = D2;
+const uint8_t ADS_SCL = D1;
+
+const uint8_t GPS_RX_PIN = D6;
+const uint8_t GPS_TX_PIN = D5;
+
+const uint8_t GSM_RX_PIN = D7;
+const uint8_t GSM_TX_PIN = D8;
+
+SoftwareSerial gpsSerial(GPS_RX_PIN, GPS_TX_PIN);
+SoftwareSerial gsmSerial(GSM_RX_PIN, GSM_TX_PIN);
+
+const uint8_t buzzerPin = D0;
+const uint8_t ledPin = D4;
+
+const uint8_t MQ2_CH = 0;
+const uint8_t MQ7_CH = 1;
+const uint8_t MQ135_CH = 2;
+
+const float MQ2_THRESHOLD = 10000.0;
+const float MQ7_THRESHOLD = 9000.0;
+const float MQ135_THRESHOLD = 8000.0;
+
+const char PHONE_NUMBER[] = "+911234567890";
+
+unsigned long lastPrint = 0;
+const unsigned long PRINT_INTERVAL = 5000;
+
+void setup() {
+  Serial.begin(115200);
+  delay(100);
+
+  Serial.println(F("Starting system..."));
+
+  pinMode(buzzerPin, OUTPUT);
+  pinMode(ledPin, OUTPUT);
+
+  digitalWrite(buzzerPin, LOW);
+  digitalWrite(ledPin, LOW);
+
+  Wire.begin(ADS_SDA, ADS_SCL);
+
+  if (!ads.begin()) {
+    Serial.println(F("Failed to initialize ADS."));
+    while (1) delay(10);
+  } else {
+    Serial.println(F("ADS1115 initialized."));
+  }
+
+  ads.setGain(GAIN_TWOTHIRDS);
+
+  gpsSerial.begin(9600);
+  gsmSerial.begin(9600);
+
+  delay(2000);
+
+  initGSM();
+
+  Serial.println(F("Setup complete."));
+}
+
+void loop() {
+
+  int16_t raw_mq2 = ads.readADC_SingleEnded(MQ2_CH);
+  int16_t raw_mq7 = ads.readADC_SingleEnded(MQ7_CH);
+  int16_t raw_mq135 = ads.readADC_SingleEnded(MQ135_CH);
+
+  float val_mq2 = (float)raw_mq2;
+  float val_mq7 = (float)raw_mq7;
+  float val_mq135 = (float)raw_mq135;
+
+  gpsSerial.listen();
+
+  while (gpsSerial.available()) {
+    char c = gpsSerial.read();
+    gps.encode(c);
+  }
+
+  bool alert = false;
+  String alertMsg = "";
+
+  if (val_mq2 >= MQ2_THRESHOLD) {
+    alert = true;
+    alertMsg += "MQ-2 high; ";
+  }
+
+  if (val_mq7 >= MQ7_THRESHOLD) {
+    alert = true;
+    alertMsg += "MQ-7 high; ";
+  }
+
+  if (val_mq135 >= MQ135_THRESHOLD) {
+    alert = true;
+    alertMsg += "MQ-135 high; ";
+  }
+
+  if (alert) {
+
+    digitalWrite(ledPin, HIGH);
+
+    buzzPattern();
+
+    String loc = getGPSString(3000);
+
+    if (loc.length() == 0)
+      loc = "Location not fixed";
+
+    String sms =
+      "ALERT! Gas levels high. " +
+      alertMsg +
+      " GPS: " +
+      loc;
+
+    Serial.println("Sending SMS: " + sms);
+
+    sendSMS(PHONE_NUMBER, sms.c_str());
+
+    delay(20000);
+
+    digitalWrite(ledPin, LOW);
+  }
+
+  if (millis() - lastPrint > PRINT_INTERVAL) {
+
+    lastPrint = millis();
+
+    Serial.println(F("---- Readings -----"));
+
+    Serial.print(F("MQ-2 (raw): "));
+    Serial.println(val_mq2);
+
+    Serial.print(F("MQ-7 (raw): "));
+    Serial.println(val_mq7);
+
+    Serial.print(F("MQ-135 (raw): "));
+    Serial.println(val_mq135);
+
+    if (gps.location.isValid()) {
+
+      Serial.print(F("GPS Lat: "));
+      Serial.println(gps.location.lat(), 6);
+
+      Serial.print(F("GPS Lng: "));
+      Serial.println(gps.location.lng(), 6);
+
+      if (gps.satellites.isValid()) {
+        Serial.print(F("Sats: "));
+        Serial.println(gps.satellites.value());
+      }
+
+    } else {
+
+      Serial.println(F("GPS: Not fixed yet."));
+    }
+  }
+
+  delay(200);
+}
+
+void initGSM() {
+
+  gsmSerial.listen();
+
+  delay(50);
+
+  Serial.println(F("Initializing SIM800L..."));
+
+  bool ok = sendATcommand("AT", "OK", 2000);
+
+  if (!ok) {
+    Serial.println(F("No response from SIM800L. Check power and wiring."));
+    return;
+  }
+
+  sendATcommand("ATE0", "OK", 2000);
+  sendATcommand("AT+CMGF=1", "OK", 2000);
+  sendATcommand("AT+CSCS=\"GSM\"", "OK", 2000);
+
+  Serial.println(F("SIM800L init done."));
+}
+
+bool sendATcommand(const char* cmd, const char* expected, unsigned int timeout) {
+
+  gsmSerial.listen();
+
+  while (gsmSerial.available())
+    gsmSerial.read();
+
+  gsmSerial.println(cmd);
+
+  unsigned long start = millis();
+
+  String resp = "";
+
+  while (millis() - start < timeout) {
+
+    while (gsmSerial.available()) {
+      char c = gsmSerial.read();
+      resp += c;
+    }
+
+    if (resp.indexOf(expected) != -1) {
+      Serial.print(F("AT OK -> "));
+      Serial.println(cmd);
+      return true;
+    }
+
+    delay(10);
+  }
+
+  Serial.print(F("AT timeout or failed -> "));
+  Serial.println(cmd);
+
+  Serial.print(F("Resp: "));
+  Serial.println(resp);
+
+  return false;
+}
+
+void sendSMS(const char* number, const char* message) {
+
+  gsmSerial.listen();
+
+  delay(100);
+
+  gsmSerial.print("AT+CMGS=\"");
+  gsmSerial.print(number);
+  gsmSerial.println("\"");
+
+  delay(200);
+
+  gsmSerial.print(message);
+
+  delay(200);
+
+  gsmSerial.write(0x1A);
+
+  unsigned long t0 = millis();
+
+  String resp = "";
+
+  while (millis() - t0 < 10000) {
+
+    while (gsmSerial.available()) {
+      char c = gsmSerial.read();
+      resp += c;
+    }
+
+    if (resp.indexOf("OK") != -1 || resp.indexOf("ERROR") != -1)
+      break;
+
+    delay(50);
+  }
+
+  Serial.println(F("SMS send response:"));
+  Serial.println(resp);
+}
+
+String getGPSString(unsigned long maxWaitMs) {
+
+  String out = "";
+
+  unsigned long start = millis();
+
+  while (millis() - start < maxWaitMs) {
+
+    gpsSerial.listen();
+
+    while (gpsSerial.available()) {
+      char c = gpsSerial.read();
+      gps.encode(c);
+    }
+
+    if (gps.location.isValid() &&
+        gps.location.age() < 20000) {
+
+      out += String(gps.location.lat(), 6);
+      out += ",";
+      out += String(gps.location.lng(), 6);
+
+      return out;
+    }
+
+    delay(100);
+  }
+
+  return "";
+}
+
+void buzzPattern() {
+
+  for (int i = 0; i < 6; i++) {
+
+    digitalWrite(buzzerPin, HIGH);
+    digitalWrite(ledPin, HIGH);
+
+    delay(200);
+
+    digitalWrite(buzzerPin, LOW);
+    digitalWrite(ledPin, LOW);
+
+    delay(100);
+  }
+}
