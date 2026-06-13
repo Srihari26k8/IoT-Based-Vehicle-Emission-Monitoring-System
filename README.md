@@ -1,67 +1,35 @@
 IoT-Based Vehicle Emission Monitoring System
 
-Introduction
+Overview
 
-Vehicle emissions are a major source of air pollution in urban areas. This project presents an IoT-based solution that continuously monitors vehicle exhaust emissions and uploads the data to the cloud for real-time analysis and tracking.
+An IoT-based system that monitors vehicle emissions in real time using ESP8266, MQ2, MQ7, and MQ135 sensors. The collected data is sent to the ThingSpeak cloud platform for remote monitoring and analysis.
 
-Problem Statement
+Technologies Used
 
-Traditional emission testing is periodic and cannot detect excessive emissions during regular vehicle operation. This project provides continuous monitoring and instant reporting of harmful pollutants.
-
-Proposed Solution
-
-The system uses an ESP8266 microcontroller connected to MQ2, MQ7, and MQ135 gas sensors to detect smoke, carbon monoxide, and air-quality-related pollutants. GPS provides location tracking, while GSM/Internet connectivity uploads the collected data to the ThingSpeak cloud platform for remote monitoring.
-
-Hardware Components
-
-* ESP8266 Microcontroller
-* MQ2 Smoke Sensor
-* MQ7 Carbon Monoxide Sensor
-* MQ135 Air Quality Sensor
+* ESP8266
+* MQ2 Sensor
+* MQ7 Sensor
+* MQ135 Sensor
 * GPS Module
 * GSM Module
-* Buzzer
-* LED Indicators
-
-Software & Technologies
-
+* ADS1115
 * Arduino IDE
-* Embedded C/C++
-* ThingSpeak Cloud
-* IoT Communication Protocols
-* GPS Tracking
+* ThingSpeak
 
-System Architecture
-
-Gas Sensors → ESP8266 → GPS/GSM Module → ThingSpeak Cloud → Remote Monitoring Dashboard
-
-Key Features
+Features
 
 * Real-time emission monitoring
-* Cloud-based data visualization
-* GPS-enabled vehicle tracking
-* Pollution threshold alerts
-* Remote access through mobile and desktop devices
-* Low-cost and scalable implementation
+* GPS-based location tracking
+* Cloud data visualization
+* SMS alert notifications
+* Remote monitoring
 
-Applications
+Files
 
-* Smart Cities
-* Environmental Monitoring
-* Fleet Management
-* Vehicle Pollution Control
-* Government Pollution Monitoring Programs
-
-Results
-
-The system successfully detects pollutant levels, records location information, and uploads data to the cloud dashboard for continuous monitoring and analysis.
-
-Future Enhancements
-
-* Mobile application integration
-* AI-based emission prediction
-* Automatic compliance reporting
-* Advanced analytics dashboard
+* vehicle_emission_monitoring.ino – Source Code
+* Vehicle emission monitoring system report.pdf – Project Report
+* Dashboard Screenshot
+* Project Demonstration Video
 
 Team Members
 
@@ -72,15 +40,4 @@ Team Members
 
 License
 
-This project is developed for academic and learning purposes.
-
-## Project Output
-
-### ThingSpeak Dashboard
-
-<img src="Thingspeak dashboard screenshot.jpeg" alt="ThingSpeak Dashboard" width="700"/>
-
-### Demonstration Video
-
-The project demonstration video can be viewed from the file:
-- output video.mp4
+Academic Mini Project
