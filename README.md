@@ -77,6 +77,7 @@ This project is developed for academic and learning purposes.
 ## Project Output
 
 ### ThingSpeak Dashboard
+
 ![ThingSpeak Dashboard](Thingspeak%20dashboard%20screenshot.jpeg)
 
 ### Demonstration Video
